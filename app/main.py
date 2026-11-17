@@ -8,17 +8,25 @@ from app.api.routes import router as api_router
 from app.config import settings
 
 
-@asynccontextmanager
-async def lifespan(_: FastAPI) -> AsyncIterator[None]:
-    """Ensure required static and template directories exist before serving requests."""
+def _ensure_directories_exist() -> None:
+    """Create static and template subdirectories if they do not exist."""
     (settings.STATIC_DIR / "images").mkdir(parents=True, exist_ok=True)
     (settings.STATIC_DIR / "fonts").mkdir(parents=True, exist_ok=True)
     (settings.TEMPLATES_DIR / "styles").mkdir(parents=True, exist_ok=True)
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+    """Ensure required directories exist during application lifespan."""
+    _ensure_directories_exist()
     yield
 
 
 def create_app() -> FastAPI:
     """Instantiate and configure the FastAPI web application."""
+    # Ensure directories exist before StaticFiles checks the path at import time
+    _ensure_directories_exist()
+
     application = FastAPI(
         title="AI Document Restructure & PDF Utility",
         description="Sanitizes raw text or PDFs with Gemini and compiles branded PDFs.",
