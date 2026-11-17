@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DocFlow AI — Document Restructuring &amp; PDF Studio</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col">
+    <!-- Top Navigation Bar -->
+    <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur px-6 py-4 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-lg bg-blue-700 flex items-center justify-center font-bold text-white shadow">
+                DF
+            </div>
+            <div>
+                <h1 class="text-lg font-bold tracking-tight text-white">DocFlow AI Studio</h1>
+                <p class="text-xs text-slate-400">Sanitize, Restructure &amp; Compile Branded PDFs</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-2">
+            <button
+                id="btn-design-test"
+                type="button"
+                class="text-xs font-medium px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition"
+                title="Test your HTML/CSS template immediately without using Gemini API quota"
+            >
+                Instant Design Preview (No AI Quota)
+            </button>
+            <a
+                id="btn-download"
+                href="#"
+                download="restructured_document.pdf"
+                class="hidden text-xs font-semibold px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white shadow transition"
+            >
+                Download PDF
+            </a>
+        </div>
+    </header>
+
+    <!-- Main Split Workspace -->
+    <main class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 p-6 max-w-7xl w-full mx-auto">
+        <!-- Left Column: Input Controls -->
+        <section class="lg:col-span-5 flex flex-col gap-5 bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-lg">
+            <!-- Input Mode Toggle -->
+            <div>
+                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+                    1. Select Source Input
+                </label>
+                <div class="grid grid-cols-2 gap-2 bg-slate-950 p-1 rounded-lg border border-slate-800">
+                    <button
+                        type="button"
+                        id="tab-pdf"
+                        class="py-2 text-xs font-semibold rounded-md bg-blue-600 text-white transition"
+                    >
+                        Upload PDF File
+                    </button>
+                    <button
+                        type="button"
+                        id="tab-text"
+                        class="py-2 text-xs font-semibold rounded-md text-slate-400 hover:text-white transition"
+                    >
+                        Paste Raw Text
+                    </button>
+                </div>
+            </div>
+
+            <form id="transform-form" class="flex flex-col gap-5 flex-1">
+                <!-- PDF Upload Panel -->
+                <div id="panel-pdf" class="flex flex-col gap-2">
+                    <label
+                        for="pdf-input"
+                        id="drop-zone"
+                        class="border-2 border-dashed border-slate-700 hover:border-blue-500 rounded-xl p-6 text-center cursor-pointer transition bg-slate-950/60 flex flex-col items-center justify-center min-h-[180px]"
+                    >
+                        <svg class="w-10 h-10 text-blue-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                        </svg>
+                        <span id="file-label-primary" class="text-sm font-medium text-slate-200">
+                            Click to select a PDF or drag &amp; drop here
+                        </span>
+                        <span id="file-label-sub" class="text-xs text-slate-500 mt-1">
+                            Maximum file size: 20 MB (.pdf only)
+                        </span>
+                        <input id="pdf-input" name="pdf_file" type="file" accept="application/pdf,.pdf" class="hidden" />
+                    </label>
+                </div>
+
+                <!-- Raw Text Panel -->
+                <div id="panel-text" class="hidden flex-col gap-2">
+                    <textarea
+                        id="raw-text-input"
+                        name="raw_text"
+                        rows="8"
+                        placeholder="Paste messy notes, OCR text, or unformatted report data here..."
+                        class="w-full rounded-xl bg-slate-950 border border-slate-800 focus:border-blue-500 focus:outline-none p-3.5 text-sm text-slate-100 placeholder-slate-500 resize-y"
+                    ></textarea>
+                </div>
+
+                <!-- Custom AI Instructions -->
+                <div class="flex flex-col gap-1.5">
+                    <label for="custom-instructions" class="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                        2. Sanitization &amp; Branding Directives (Optional)
+                    </label>
+                    <textarea
+                        id="custom-instructions"
+                        name="custom_instructions"
+                        rows="3"
+                        placeholder="e.g., Remove confidential headers, use an executive tone, highlight financial totals, and group action items at the end."
+                        class="w-full rounded-xl bg-slate-950 border border-slate-800 focus:border-blue-500 focus:outline-none p-3 text-sm text-slate-100 placeholder-slate-500"
+                    ></textarea>
+                </div>
+
+                <!-- Status Banner -->
+                <div id="status-banner" class="hidden rounded-lg p-3 text-xs font-medium border"></div>
+
+                <!-- Action Buttons -->
+                <div class="mt-auto pt-2 flex flex-col sm:flex-row gap-2.5">
+                    <button
+                        type="submit"
+                        id="btn-generate-pdf"
+                        class="flex-1 py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-50 font-semibold text-sm text-white shadow-lg transition flex items-center justify-center gap-2"
+                    >
+                        <span>Generate Branded PDF</span>
+                    </button>
+                    <button
+                        type="button"
+                        id="btn-preview-html"
+                        class="py-3 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-50 font-semibold text-sm text-slate-200 border border-slate-700 transition"
+                    >
+                        HTML Preview
+                    </button>
+                </div>
+            </form>
+        </section>
+
+        <!-- Right Column: Live Document Preview Frame -->
+        <section class="lg:col-span-7 flex flex-col bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-lg min-h-[600px]">
+            <div class="px-4 py-3 border-b border-slate-800 flex items-center justify-between bg-slate-950/50">
+                <span id="preview-title" class="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                    Live Output Preview
+                </span>
+                <span id="preview-badge" class="text-xs px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-400">
+                    Idle
+                </span>
+            </div>
+
+            <div class="relative flex-1 bg-slate-950 flex items-center justify-center">
+                <!-- Empty State -->
+                <div id="empty-state" class="text-center p-8 max-w-sm">
+                    <p class="text-sm font-medium text-slate-300">No document compiled yet</p>
+                    <p class="text-xs text-slate-500 mt-1">
+                        Upload a PDF or paste raw text on the left, or click "Instant Design Preview" in the top bar to inspect your custom HTML/CSS layout.
+                    </p>
+                </div>
+
+                <!-- Embedded Preview Iframe -->
+                <iframe
+                    id="preview-frame"
+                    title="Compiled Document Preview"
+                    class="hidden w-full h-full border-0 bg-white"
+                ></iframe>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        (() => {
+            const tabPdf = document.getElementById("tab-pdf");
+            const tabText = document.getElementById("tab-text");
+            const panelPdf = document.getElementById("panel-pdf");
+            const panelText = document.getElementById("panel-text");
+            const pdfInput = document.getElementById("pdf-input");
+            const dropZone = document.getElementById("drop-zone");
+            const rawTextInput = document.getElementById("raw-text-input");
+            const customInstructions = document.getElementById("custom-instructions");
+            const fileLabelPrimary = document.getElementById("file-label-primary");
+            const fileLabelSub = document.getElementById("file-label-sub");
+            const form = document.getElementById("transform-form");
+            const btnGeneratePdf = document.getElementById("btn-generate-pdf");
+            const btnPreviewHtml = document.getElementById("btn-preview-html");
+            const btnDesignTest = document.getElementById("btn-design-test");
+            const btnDownload = document.getElementById("btn-download");
+            const statusBanner = document.getElementById("status-banner");
+            const previewFrame = document.getElementById("preview-frame");
+            const emptyState = document.getElementById("empty-state");
+            const previewBadge = document.getElementById("preview-badge");
+
+            let activeMode = "pdf";
+            let isSubmitting = false;
+            let currentBlobUrl = null;
+
+            function revokeCurrentBlobUrl() {
+                if (currentBlobUrl) {
+                    URL.revokeObjectURL(currentBlobUrl);
+                    currentBlobUrl = null;
+                }
+            }
+
+            function setStatus(message, type = "info") {
+                statusBanner.classList.remove(
+                    "hidden",
+                    "bg-red-950/80",
+                    "border-red-800",
+                    "text-red-200",
+                    "bg-blue-950/80",
+                    "border-blue-800",
+                    "text-blue-200",
+                    "bg-emerald-950/80",
+                    "border-emerald-800",
+                    "text-emerald-200"
+                );
+                if (type === "error") {
+                    statusBanner.classList.add("bg-red-950/80", "border-red-800", "text-red-200");
+                } else if (type === "success") {
+                    statusBanner.classList.add("bg-emerald-950/80", "border-emerald-800", "text-emerald-200");
+                } else {
+                    statusBanner.classList.add("bg-blue-950/80", "border-blue-800", "text-blue-200");
+                }
+                statusBanner.textContent = message;
+            }
+
+            function setLoadingState(loading, labelText = "Processing...") {
+                isSubmitting = loading;
+                btnGeneratePdf.disabled = loading;
+                btnPreviewHtml.disabled = loading;
+                btnDesignTest.disabled = loading;
+                if (loading) {
+                    previewBadge.textContent = labelText;
+                    setStatus(labelText, "info");
+                }
+            }
+
+            function switchMode(mode) {
+                activeMode = mode;
+                if (mode === "pdf") {
+                    tabPdf.className = "py-2 text-xs font-semibold rounded-md bg-blue-600 text-white transition";
+                    tabText.className = "py-2 text-xs font-semibold rounded-md text-slate-400 hover:text-white transition";
+                    panelPdf.classList.remove("hidden");
+                    panelText.classList.add("hidden");
+                } else {
+                    tabText.className = "py-2 text-xs font-semibold rounded-md bg-blue-600 text-white transition";
+                    tabPdf.className = "py-2 text-xs font-semibold rounded-md text-slate-400 hover:text-white transition";
+                    panelText.classList.remove("hidden");
+                    panelText.classList.add("flex");
+                    panelPdf.classList.add("hidden");
+                }
+            }
+
+            tabPdf.addEventListener("click", () => switchMode("pdf"));
+            tabText.addEventListener("click", () => switchMode("text"));
+
+            pdfInput.addEventListener("change", () => {
+                const file = pdfInput.files[0];
+                if (file) {
+                    fileLabelPrimary.textContent = file.name;
+                    fileLabelSub.textContent = `${(file.size / (1024 * 1024)).toFixed(2)} MB selected`;
+                }
+            });
+
+            dropZone.addEventListener("dragover", (e) => {
+                e.preventDefault();
+                dropZone.classList.add("border-blue-500");
+            });
+            dropZone.addEventListener("dragleave", () => {
+                dropZone.classList.remove("border-blue-500");
+            });
+            dropZone.addEventListener("drop", (e) => {
+                e.preventDefault();
+                dropZone.classList.remove("border-blue-500");
+                if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                    pdfInput.files = e.dataTransfer.files;
+                    pdfInput.dispatchEvent(new Event("change"));
+                }
+            });
+
+            function buildFormData() {
+                const formData = new FormData();
+                if (activeMode === "pdf") {
+                    const file = pdfInput.files[0];
+                    if (!file) {
+                        throw new Error("Please select a PDF file to upload.");
+                    }
+                    formData.append("pdf_file", file);
+                } else {
+                    const textVal = rawTextInput.value.trim();
+                    if (!textVal) {
+                        throw new Error("Please paste raw text to restructure.");
+                    }
+                    formData.append("raw_text", textVal);
+                }
+                formData.append("custom_instructions", customInstructions.value.trim());
+                return formData;
+            }
+
+            async function executeRequest(endpoint, expectPdf = true) {
+                if (isSubmitting) return;
+                let formData;
+                try {
+                    formData = endpoint === "/api/v1/design-preview" ? new FormData() : buildFormData();
+                } catch (validationErr) {
+                    setStatus(validationErr.message, "error");
+                    return;
+                }
+
+                setLoadingState(true, expectPdf ? "Structuring & Compiling PDF..." : "Rendering HTML Preview...");
+
+                try {
+                    const response = await fetch(endpoint, {
+                        method: "POST",
+                        body: formData,
+                    });
+
+                    if (!response.ok) {
+                        let errorDetail = `Request failed (HTTP ${response.status})`;
+                        try {
+                            const errJson = await response.json();
+                            if (errJson.detail) errorDetail = errJson.detail;
+                        } catch (_) {}
+                        throw new Error(errorDetail);
+                    }
+
+                    revokeCurrentBlobUrl();
+                    emptyState.classList.add("hidden");
+                    previewFrame.classList.remove("hidden");
+
+                    if (expectPdf) {
+                        const pdfBlob = await response.blob();
+                        currentBlobUrl = URL.createObjectURL(pdfBlob);
+                        previewFrame.removeAttribute("srcdoc");
+                        previewFrame.src = currentBlobUrl;
+
+                        const suggestedName = response.headers.get("X-Document-Filename") || "restructured_document.pdf";
+                        btnDownload.href = currentBlobUrl;
+                        btnDownload.download = suggestedName;
+                        btnDownload.classList.remove("hidden");
+
+                        previewBadge.textContent = "PDF Ready";
+                        setStatus(`Compiled ${suggestedName} (${(pdfBlob.size / 1024).toFixed(1)} KB)`, "success");
+                    } else {
+                        const htmlText = await response.text();
+                        previewFrame.src = "about:blank";
+                        previewFrame.srcdoc = htmlText;
+                        btnDownload.classList.add("hidden");
+
+                        previewBadge.textContent = "HTML Preview";
+                        setStatus("Rendered live HTML/CSS preview.", "success");
+                    }
+                } catch (err) {
+                    previewBadge.textContent = "Error";
+                    setStatus(err.message || "Unexpected error occurred.", "error");
+                } finally {
+                    isSubmitting = false;
+                    btnGeneratePdf.disabled = false;
+                    btnPreviewHtml.disabled = false;
+                    btnDesignTest.disabled = false;
+                }
+            }
+
+            form.addEventListener("submit", (e) => {
+                e.preventDefault();
+                executeRequest("/api/v1/transform", true);
+            });
+
+            btnPreviewHtml.addEventListener("click", () => {
+                executeRequest("/api/v1/preview-html", false);
+            });
+
+            btnDesignTest.addEventListener("click", () => {
+                executeRequest("/api/v1/design-preview", true);
+            });
+        })();
+    </script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+﻿.env
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+sample_output.pdf
+.DS_Store
+Thumbs.db
+.vscode/*

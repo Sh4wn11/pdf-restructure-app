@@ -1,0 +1,159 @@
+@page {
+    size: A4 portrait;
+    margin: 16mm 15mm 18mm 15mm;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+}
+
+body {
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+    color: #1e293b;
+    background-color: #ffffff;
+    line-height: 1.6;
+    font-size: 10.5pt;
+}
+
+.report-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    border-bottom: 3px solid #1e3a8a;
+    padding-bottom: 14px;
+    margin-bottom: 20px;
+}
+
+.brand-title-group {
+    max-width: 72%;
+}
+
+.document-title {
+    font-size: 20pt;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+}
+
+.document-subtitle {
+    font-size: 11pt;
+    font-weight: 500;
+    color: #475569;
+    margin-top: 4px;
+}
+
+.brand-logo {
+    max-height: 44px;
+    width: auto;
+    object-fit: contain;
+}
+
+.metadata-bar {
+    display: flex;
+    gap: 16px;
+    background-color: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 8px 14px;
+    margin-bottom: 20px;
+    font-size: 9pt;
+    color: #475569;
+}
+
+.metadata-item strong {
+    color: #0f172a;
+    font-weight: 600;
+}
+
+.executive-summary {
+    background-color: #eff6ff;
+    border-left: 4px solid #1d4ed8;
+    border-radius: 0 8px 8px 0;
+    padding: 14px 18px;
+    margin-bottom: 24px;
+    break-inside: avoid;
+}
+
+.executive-summary-label {
+    font-size: 8.5pt;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #1d4ed8;
+    margin-bottom: 6px;
+}
+
+.executive-summary p {
+    font-size: 10.5pt;
+    color: #1e293b;
+}
+
+.section-card {
+    margin-bottom: 22px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid #f1f5f9;
+    break-inside: avoid;
+}
+
+.section-heading {
+    font-size: 13.5pt;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.section-index {
+    background-color: #1e3a8a;
+    color: #ffffff;
+    font-size: 8.5pt;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 4px;
+}
+
+.section-paragraph {
+    margin-bottom: 10px;
+    color: #334155;
+    text-align: justify;
+}
+
+.callout-box {
+    background-color: #fefce8;
+    border: 1px solid #fde047;
+    border-left: 4px solid #eab308;
+    border-radius: 6px;
+    padding: 10px 14px;
+    margin: 12px 0;
+    font-size: 10pt;
+    font-weight: 600;
+    color: #713f12;
+    break-inside: avoid;
+}
+
+.bullet-list {
+    margin: 8px 0 4px 20px;
+    color: #1e293b;
+}
+
+.bullet-list li {
+    margin-bottom: 5px;
+    padding-left: 4px;
+}
+
+.report-footer {
+    margin-top: 28px;
+    padding-top: 10px;
+    border-top: 1px solid #cbd5e1;
+    display: flex;
+    justify-content: space-between;
+    font-size: 8.5pt;
+    color: #64748b;
+}

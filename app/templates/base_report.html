@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ doc.document_title }}</title>
+    <style>
+        {{ css_styles | safe }}
+    </style>
+</head>
+<body>
+    <header class="report-header">
+        <div class="brand-title-group">
+            <h1 class="document-title">{{ doc.document_title }}</h1>
+            {% if doc.subtitle %}
+            <p class="document-subtitle">{{ doc.subtitle }}</p>
+            {% endif %}
+        </div>
+        {% if logo_data_uri %}
+        <img src="{{ logo_data_uri }}" alt="Brand Logo" class="brand-logo" />
+        {% endif %}
+    </header>
+
+    <section class="metadata-bar">
+        <div class="metadata-item">
+            <strong>Date:</strong> {{ doc.metadata_date }}
+        </div>
+        <div class="metadata-item">
+            <strong>Source / Author:</strong> {{ doc.author_or_source }}
+        </div>
+        <div class="metadata-item">
+            <strong>Sections:</strong> {{ doc.sections | length }}
+        </div>
+    </section>
+
+    <section class="executive-summary">
+        <div class="executive-summary-label">Executive Summary</div>
+        <p>{{ doc.executive_summary }}</p>
+    </section>
+
+    <main>
+        {% for section in doc.sections %}
+        <article class="section-card">
+            <h2 class="section-heading">
+                <span class="section-index">{{ "%02d" | format(loop.index) }}</span>
+                <span>{{ section.heading }}</span>
+            </h2>
+
+            {% for paragraph in section.body_paragraphs %}
+            <p class="section-paragraph">{{ paragraph }}</p>
+            {% endfor %}
+
+            {% if section.highlight_callout %}
+            <div class="callout-box">
+                {{ section.highlight_callout }}
+            </div>
+            {% endif %}
+
+            {% if section.key_bullets %}
+            <ul class="bullet-list">
+                {% for bullet in section.key_bullets %}
+                <li>{{ bullet }}</li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+        </article>
+        {% endfor %}
+    </main>
+
+    <footer class="report-footer">
+        <span>Structured & Sanitized Document Output</span>
+        <span>{{ doc.document_title }}</span>
+    </footer>
+</body>
+</html>
