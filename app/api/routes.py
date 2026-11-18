@@ -13,51 +13,91 @@ from app.services.template_engine import render_document_html
 router = APIRouter()
 
 
-def _sanitize_pdf_filename(title: str) -> str:
-    """Sanitize document title into a safe ASCII filename to prevent header injection."""
-    cleaned = re.sub(r"[^A-Za-z0-9_-]+", "_", title.strip()).strip("_")
-    safe_stem = cleaned[:60] if cleaned else "restructured_document"
+def _sanitize_pdf_filename(job_id_or_title: str) -> str:
+    """
+    Format the PDF filename strictly as 'Orchard_(JOB ID).pdf' (e.g., 'Orchard_Job-20159.pdf')
+    while stripping any unsafe header/path characters.
+    """
+    cleaned = re.sub(r"[^A-Za-z0-9_-]+", "_", job_id_or_title.strip()).strip("_")
+    if not cleaned:
+        cleaned = "Job-Unlisted"
+    if cleaned.lower().startswith("orchard_"):
+        safe_stem = cleaned[:60]
+    else:
+        safe_stem = f"Orchard_{cleaned}"[:60]
     return f"{safe_stem}.pdf"
 
 
 def _build_sample_document() -> RestructuredDocument:
-    """Return a deterministic sample document for instant CSS/HTML layout testing."""
+    """Return a sample sanitized Orchard VMS job posting for instant HTML/CSS design previews."""
     return RestructuredDocument(
-        document_title="Q3 Commercial Fleet & Operations Report",
-        subtitle="Executive Performance Summary & Infrastructure Plan",
+        job_id="Job-20159",
+        role_type="Locums",
+        document_title="Locums — Inpatient Hospitalist Physician",
+        subtitle="Locums Opportunity | OH",
         executive_summary=(
-            "During October 2026, commercial fleet operations generated USD 1.4M in total "
-            "revenue across truck and motorcycle divisions. Service bay expansion is scheduled "
-            "for Q4 to support growing maintenance volume."
+            "A Facility in OH is seeking a Board-Certified Internal Medicine or Family Medicine "
+            "Hospitalist for ongoing inpatient locums coverage. Day and night shifts are available."
         ),
-        metadata_date="2026-10-01",
-        author_or_source="Fleet Operations Division",
+        metadata_date="2026-11-18",
+        nearest_airport="OH (approximately 20 minutes away from CMH Airport)",
         sections=[
             ContentSection(
-                heading="Unit Delivery & Revenue Breakdown",
+                heading="Assignment Overview",
                 body_paragraphs=[
-                    "Demand for heavy commercial trucks remained strong throughout the quarter, "
-                    "accounting for the majority of gross dealership billings.",
-                    "Motorcycle fleet orders increased among regional logistics partners seeking "
-                    "last-mile delivery efficiency.",
-                ],
-                highlight_callout="Key Milestone: USD 1.4M total revenue with 60 total vehicles delivered.",
-                key_bullets=[
-                    "Delivered 42 commercial trucks to enterprise accounts.",
-                    "Delivered 18 fleet motorcycles for urban courier routes.",
-                    "Maintained a 98.4% on-time vehicle handover rate.",
-                ],
-            ),
-            ContentSection(
-                heading="Q4 Infrastructure & Service Action Plan",
-                body_paragraphs=[
-                    "To prevent maintenance bottlenecks as active fleet contracts scale, "
-                    "workshop capacity will be upgraded before year-end."
+                    "Location & Facility Details: 280-bed acute care Facility located in OH utilizing Epic EMR. "
+                    "Open ICU model with full subspecialty backup."
                 ],
                 highlight_callout=None,
                 key_bullets=[
-                    "Expand primary service bay capacity by Q4.",
-                    "Standardize preventive diagnostic checklists across all bays.",
+                    "Role Type: Locums coverage (minimum 7 shifts per month).",
+                    "Setting: Inpatient acute care Facility in OH.",
+                    "EMR System: Epic.",
+                ],
+            ),
+            ContentSection(
+                heading="Schedule & Coverage",
+                body_paragraphs=[
+                    "7-on / 7-off block scheduling with 12-hour shifts (7:00 AM – 7:00 PM or 7:00 PM – 7:00 AM)."
+                ],
+                highlight_callout=None,
+                key_bullets=[
+                    "No night call required for daytime rounding physicians.",
+                    " Holiday and weekend coverage included in block rotation.",
+                ],
+            ),
+            ContentSection(
+                heading="Clinical Details",
+                body_paragraphs=[
+                    "Average daily census of 15–18 patients per day rounder, including 2–3 admissions per shift."
+                ],
+                highlight_callout=None,
+                key_bullets=[
+                    "Dedicated nocturnist handles overnight admissions.",
+                    "Intensivist and pulmonology support available on-site.",
+                ],
+            ),
+            ContentSection(
+                heading="Requirements",
+                body_paragraphs=[
+                    "Candidates must hold an active OH medical license and current DEA registration."
+                ],
+                highlight_callout=None,
+                key_bullets=[
+                    "Board Certified in Internal Medicine (ABIM) or Family Medicine (ABFM).",
+                    "Active ACLS and BLS certifications.",
+                    "Clean malpractice history for emergency temp privileges (30–45 days).",
+                ],
+            ),
+            ContentSection(
+                heading="Skills",
+                body_paragraphs=[
+                    "Inpatient acute care management and standard hospitalist rounding."
+                ],
+                highlight_callout=None,
+                key_bullets=[
+                    "No bedside procedures (intubations or central lines) required.",
+                    "Proficiency with Epic inpatient order sets and discharge documentation.",
                 ],
             ),
         ],
@@ -77,13 +117,19 @@ async def serve_web_ui() -> HTMLResponse:
     return HTMLResponse(content=html_content)
 
 
+@router.get("/favicon.ico", include_in_schema=False)
+async def favicon() -> Response:
+    """Return 204 No Content so browsers do not log a 404 error on /favicon.ico."""
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
 @router.post("/api/v1/transform")
 async def transform_to_pdf(
     raw_text: str | None = Form(default=None),
     pdf_file: UploadFile | None = File(default=None),
     custom_instructions: str = Form(default=""),
 ) -> Response:
-    """Ingest text or PDF, sanitize and structure with Gemini, and compile to a branded PDF."""
+    """Ingest text or PDF, sanitize and structure with Gemini, and compile to an Orchard PDF."""
     extracted_text = await ingest_user_input(raw_text=raw_text, pdf_file=pdf_file)
     structured_doc = await sanitize_and_structure_async(
         raw_text=extracted_text,
@@ -92,7 +138,7 @@ async def transform_to_pdf(
     rendered_html = await asyncio.to_thread(render_document_html, structured_doc)
     pdf_bytes = await compile_html_to_pdf(rendered_html)
 
-    safe_filename = _sanitize_pdf_filename(structured_doc.document_title)
+    safe_filename = _sanitize_pdf_filename(structured_doc.job_id)
     return Response(
         content=pdf_bytes,
         media_type="application/pdf",
@@ -123,10 +169,7 @@ async def preview_structured_html(
 async def preview_design_without_ai(
     output_format: str = Form(default="pdf"),
 ) -> Response:
-    """
-    Compile the sample document into PDF or HTML without calling the Gemini API.
-    Ideal for rapid custom HTML/CSS design iteration.
-    """
+    """Compile the sample Orchard job profile into PDF or HTML without calling the Gemini API."""
     sample_doc = _build_sample_document()
     rendered_html = await asyncio.to_thread(render_document_html, sample_doc)
 
@@ -134,11 +177,12 @@ async def preview_design_without_ai(
         return HTMLResponse(content=rendered_html)
 
     pdf_bytes = await compile_html_to_pdf(rendered_html)
+    safe_filename = _sanitize_pdf_filename(sample_doc.job_id)
     return Response(
         content=pdf_bytes,
         media_type="application/pdf",
         headers={
-            "Content-Disposition": 'inline; filename="design_preview.pdf"',
-            "X-Document-Filename": "design_preview.pdf",
+            "Content-Disposition": f'inline; filename="{safe_filename}"',
+            "X-Document-Filename": safe_filename,
         },
     )

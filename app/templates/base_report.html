@@ -2,47 +2,51 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>{{ doc.document_title }}</title>
+    <title>Orchard_{{ doc.job_id }} — {{ doc.document_title }}</title>
     <style>
         {{ css_styles | safe }}
     </style>
 </head>
 <body>
+    <!-- Upper Header with Right-Aligned Orchard_PD_Logo -->
     <header class="report-header">
         <div class="brand-title-group">
+            <div class="job-id-badge">Orchard_{{ doc.job_id }}</div>
             <h1 class="document-title">{{ doc.document_title }}</h1>
             {% if doc.subtitle %}
             <p class="document-subtitle">{{ doc.subtitle }}</p>
             {% endif %}
         </div>
         {% if logo_data_uri %}
-        <img src="{{ logo_data_uri }}" alt="Brand Logo" class="brand-logo" />
+        <div class="brand-logo-container">
+            <img src="{{ logo_data_uri }}" alt="Orchard Logo" class="brand-logo" />
+        </div>
         {% endif %}
     </header>
 
+    <!-- Navbar: Date & Nearest Airport Only -->
     <section class="metadata-bar">
         <div class="metadata-item">
             <strong>Date:</strong> {{ doc.metadata_date }}
         </div>
         <div class="metadata-item">
-            <strong>Source / Author:</strong> {{ doc.author_or_source }}
-        </div>
-        <div class="metadata-item">
-            <strong>Sections:</strong> {{ doc.sections | length }}
+            <strong>Nearest Airport:</strong> {{ doc.nearest_airport }}
         </div>
     </section>
 
+    <!-- Executive Summary -->
     <section class="executive-summary">
-        <div class="executive-summary-label">Executive Summary</div>
+        <div class="executive-summary-label">Position Overview</div>
         <p>{{ doc.executive_summary }}</p>
     </section>
 
+    <!-- 5 Structured Body Sections (01 to 05) -->
     <main>
         {% for section in doc.sections %}
         <article class="section-card">
             <h2 class="section-heading">
                 <span class="section-index">{{ "%02d" | format(loop.index) }}</span>
-                <span>{{ section.heading }}</span>
+                <span>{{ section.heading }}:</span>
             </h2>
 
             {% for paragraph in section.body_paragraphs %}
@@ -66,9 +70,10 @@
         {% endfor %}
     </main>
 
+    <!-- Footer -->
     <footer class="report-footer">
-        <span>Structured & Sanitized Document Output</span>
-        <span>{{ doc.document_title }}</span>
+        <span>Orchard Position Profile</span>
+        <span>Orchard_{{ doc.job_id }}</span>
     </footer>
 </body>
 </html>
