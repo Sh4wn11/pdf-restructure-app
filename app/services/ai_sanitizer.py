@@ -72,15 +72,11 @@ _STRUCTURED_CACHE: OrderedDict[str, RestructuredDocument] = OrderedDict()
 
 @lru_cache(maxsize=1)
 def get_genai_client() -> genai.Client:
-    """Return a cached Google GenAI client with a 90s server deadline and fast 2-attempt retry."""
-    http_kwargs: dict = {"timeout": 600000}
+    """Return a cached Google GenAI client with 1 attempt per model to preserve API quota."""
+    http_kwargs: dict = {"timeout": 90000}
     retry_cls = getattr(types, "HttpRetryOptions", None)
     if retry_cls is not None:
-        http_kwargs["retry_options"] = retry_cls(
-            attempts=2,
-            initial_delay=1.5,
-            max_delay=4.0,
-        )
+        http_kwargs["retry_options"] = retry_cls(attempts=1)
 
     return genai.Client(
         api_key=settings.GEMINI_API_KEY,
@@ -210,32 +206,11 @@ def sanitize_and_structure(
             )
             elapsed = time.monotonic() - start_time
             print(
-                f"[AI Sanitizer] Received valid response from '{model_name}' in {elapsed:.1f}s.",
-                flush=True,
-            )
-            break
-        except genai_errors.APIError as exc:
-            err_code = getattr(exc, "code", None)
-            err_msg = getattr(exc, "message", str(exc))
-
-            if err_code == 400 and "thinking" in err_msg.lower():
-                try:
-                    response = client.models.generate_content(
-                        model=model_name,
-                        contents=full_prompt,
-                        config=_build_generation_config(use_zero_thinking=False),
-                    )
-                    break
-                except Exception as retry_exc:
-                    exc = retry_exc  # type: ignore[assignment]
-                    err_code = getattr(exc, "code", None)
-                    err_msg = getattr(exc, "message", str(exc))
-
-            print(
                 f"[AI Sanitizer] Model '{model_name}' failed (HTTP {err_code}): {err_msg}",
                 flush=True,
             )
-            if primary_error is None or err_code in TRANSIENT_STATUS_CODES:
+            # Keep the primary model's error so fallback 404/429s never mask it
+            if primary_error is None:
                 primary_error = exc
             continue
         except Exception as exc:
@@ -250,12 +225,12 @@ def sanitize_and_structure(
         if err_code == 429:
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail="AI rate limit reached. Please wait a moment and try again.",
+                detail=f"AI rate limit reached (429): {err_msg}",
             ) from primary_error
         if err_code in {503, 504}:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="The AI model is temporarily overloaded or timed out (503/504). Please retry shortly.",
+                detail=f"AI model is currently experiencing high demand ({err_code}). Please retry in a few seconds.",
             ) from primary_error
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
