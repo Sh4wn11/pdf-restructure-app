@@ -69,11 +69,20 @@ MAX_CACHE_ENTRIES: int = 32
 MAX_INPUT_CHARS: int = 60_000
 _STRUCTURED_CACHE: OrderedDict[str, RestructuredDocument] = OrderedDict()
 
+# Tracks models that hit 429 RPD or 404 so subsequent clicks skip straight to working fallbacks
+_DEPLETED_MODELS: set[str] = set()
+
+# Guaranteed fallback chain matching your Google AI Studio active models
+DEFAULT_FALLBACK_CHAIN: tuple[str, ...] = (
+    "gemini-3.1-flash-lite",
+    "gemini-3.8-flash",
+)
+
 
 @lru_cache(maxsize=1)
 def get_genai_client() -> genai.Client:
-    """Return a cached Google GenAI client with 1 attempt per model to preserve API quota."""
-    http_kwargs: dict = {"timeout": 90000}
+    """Return a cached Google GenAI client with 1 attempt per model so failover is immediate."""
+    http_kwargs: dict = {"timeout": 600000}
     retry_cls = getattr(types, "HttpRetryOptions", None)
     if retry_cls is not None:
         http_kwargs["retry_options"] = retry_cls(attempts=1)
@@ -95,14 +104,28 @@ def _neutralize_xml_tags(text: str) -> str:
 
 
 def _get_candidate_models() -> list[str]:
-    """Return a deduplicated list of configured primary and fallback models."""
-    configured_fallbacks = getattr(settings, "GEMINI_FALLBACK_MODELS", [])
-    candidates: list[str] = []
-    for model_name in [settings.GEMINI_MODEL, *configured_fallbacks]:
+    """
+    Build deduplicated candidate list of [GEMINI_MODEL, GEMINI_FALLBACK_MODELS, DEFAULT_FALLBACK_CHAIN].
+    Models that already returned 429/404 are moved to the end so active models run first.
+    """
+    configured_fallbacks = getattr(settings, "GEMINI_FALLBACK_MODELS", None) or []
+    raw_list = [settings.GEMINI_MODEL, *configured_fallbacks, *DEFAULT_FALLBACK_CHAIN]
+
+    active_candidates: list[str] = []
+    depleted_candidates: list[str] = []
+
+    for model_name in raw_list:
         cleaned = model_name.strip().removeprefix("models/")
-        if cleaned and cleaned not in candidates:
-            candidates.append(cleaned)
-    return candidates
+        if not cleaned:
+            continue
+        if cleaned in active_candidates or cleaned in depleted_candidates:
+            continue
+        if cleaned in _DEPLETED_MODELS:
+            depleted_candidates.append(cleaned)
+        else:
+            active_candidates.append(cleaned)
+
+    return active_candidates + depleted_candidates
 
 
 def _make_cache_key(raw_text: str, custom_instructions: str) -> str:
@@ -129,7 +152,7 @@ def _store_cached_document(cache_key: str, doc: RestructuredDocument) -> None:
 
 
 def _build_generation_config(use_zero_thinking: bool = True) -> types.GenerateContentConfig:
-    """Build GenerateContentConfig with thinking_budget=0 for low-latency JSON generation."""
+    """Build GenerateContentConfig with optional thinking_budget=0 for low-latency JSON generation."""
     config_kwargs: dict = {
         "system_instruction": SYSTEM_INSTRUCTION,
         "response_mime_type": "application/json",
@@ -151,7 +174,7 @@ def sanitize_and_structure(
 ) -> RestructuredDocument:
     """
     Synchronously send extracted VMS job text to Gemini with strict schema enforcement,
-    Orchard redaction rules, and SHA-256 caching.
+    automatic failover to gemini-3.1-flash-lite, and SHA-256 caching.
     """
     cleaned_source = raw_text.strip()
     if not cleaned_source:
@@ -206,10 +229,39 @@ def sanitize_and_structure(
             )
             elapsed = time.monotonic() - start_time
             print(
+                f"[AI Sanitizer] Received valid response from '{model_name}' in {elapsed:.1f}s.",
+                flush=True,
+            )
+            break
+        except genai_errors.APIError as exc:
+            err_code = getattr(exc, "code", None)
+            err_msg = getattr(exc, "message", str(exc))
+
+            # If model does not support thinking_config (HTTP 400), retry immediately without it
+            if err_code == 400:
+                try:
+                    response = client.models.generate_content(
+                        model=model_name,
+                        contents=full_prompt,
+                        config=_build_generation_config(use_zero_thinking=False),
+                    )
+                    elapsed = time.monotonic() - start_time
+                    print(
+                        f"[AI Sanitizer] Received valid response from '{model_name}' (standard mode) in {elapsed:.1f}s.",
+                        flush=True,
+                    )
+                    break
+                except Exception as retry_exc:
+                    exc = retry_exc  # type: ignore[assignment]
+                    err_code = getattr(exc, "code", None)
+                    err_msg = getattr(exc, "message", str(exc))
+
+            print(
                 f"[AI Sanitizer] Model '{model_name}' failed (HTTP {err_code}): {err_msg}",
                 flush=True,
             )
-            # Keep the primary model's error so fallback 404/429s never mask it
+            if err_code in {404, 429}:
+                _DEPLETED_MODELS.add(model_name)
             if primary_error is None:
                 primary_error = exc
             continue
@@ -225,12 +277,12 @@ def sanitize_and_structure(
         if err_code == 429:
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail=f"AI rate limit reached (429): {err_msg}",
+                detail=f"All candidate models hit quota limits (429): {err_msg}",
             ) from primary_error
         if err_code in {503, 504}:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail=f"AI model is currently experiencing high demand ({err_code}). Please retry in a few seconds.",
+                detail=f"AI models are temporarily overloaded ({err_code}). Please retry shortly.",
             ) from primary_error
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,

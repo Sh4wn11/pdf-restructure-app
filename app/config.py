@@ -3,7 +3,6 @@ from pathlib import Path
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# Resolve directory paths relative to this file (app/config.py)
 BASE_DIR: Path = Path(__file__).resolve().parent
 PROJECT_ROOT: Path = BASE_DIR.parent
 TEMPLATES_DIR: Path = BASE_DIR / "templates"
@@ -28,11 +27,11 @@ class Settings(BaseSettings):
     GEMINI_MODEL: str = Field(
         default="gemini-3.8-flash",
         min_length=1,
-        description="Target Gemini model identifier.",
+        description="Primary Gemini model identifier.",
     )
     GEMINI_FALLBACK_MODELS: list[str] = Field(
-        default=["gemini-3.8-flash-lite", "gemini-3.8-pro"],
-        description="Ordered fallback models if the primary model returns 503/429/404.",
+        default=["gemini-3.1-flash-lite", "gemini-3.5-flash-lite"],
+        description="Ordered fallback models with high RPD quota when primary model hits 429/503.",
     )
     MAX_UPLOAD_MB: int = Field(
         default=20,
@@ -41,7 +40,6 @@ class Settings(BaseSettings):
         description="Maximum allowed PDF upload size in megabytes.",
     )
 
-    # Path attributes exposed on the settings instance for convenience
     BASE_DIR: Path = BASE_DIR
     TEMPLATES_DIR: Path = TEMPLATES_DIR
     STATIC_DIR: Path = STATIC_DIR
