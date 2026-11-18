@@ -3,166 +3,649 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>DocFlow AI — Document Restructuring &amp; PDF Studio</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>Orchard — Position Profile & VMS Sanitization Studio</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet" />
+    <style>
+        :root {
+            --bg-page: #f8fafc;
+            --bg-surface: #ffffff;
+            --bg-subtle: #f1f5f9;
+            --bg-accent-wash: #eff6ff;
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            --text-muted: #64748b;
+            --brand-navy: #0f2942;
+            --brand-blue: #1e3a8a;
+            --brand-blue-accent: #1d4ed8;
+            --brand-blue-hover: #1e40af;
+            --border-light: #e2e8f0;
+            --border-focus: #2563eb;
+            --shadow-card: 0 1px 3px rgba(15, 23, 42, 0.04), 0 6px 16px -4px rgba(15, 23, 42, 0.04);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--bg-page);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Shared Centered Container for Navbar, Main Grid, and Footer */
+        .layout-container {
+            width: 100%;
+            max-width: 1280px;
+            margin: 0 auto;
+            padding-left: 2.5rem;
+            padding-right: 2.5rem;
+        }
+
+        /* Top Navigation Bar */
+        .site-header {
+            background-color: var(--bg-surface);
+            border-bottom: 1px solid var(--border-light);
+            position: sticky;
+            top: 0;
+            z-index: 30;
+        }
+
+        .navbar-inner {
+            height: 76px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1.5rem;
+        }
+
+        .brand-identity {
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .brand-logo-img {
+            height: 40px;
+            width: auto;
+            max-width: 190px;
+            object-fit: contain;
+            display: block;
+        }
+
+        .brand-Fallback-text {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 1.25rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            color: var(--brand-navy);
+            display: none;
+        }
+
+        .brand-divider {
+            width: 1px;
+            height: 24px;
+            background-color: var(--border-light);
+        }
+
+        .brand-context {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .brand-context-title {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 0.9375rem;
+            font-weight: 700;
+            color: var(--brand-navy);
+            letter-spacing: -0.01em;
+        }
+
+        .brand-context-sub {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-weight: 400;
+        }
+
+        .navbar-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.875rem;
+        }
+
+        /* Buttons */
+        .btn {
+            font-family: inherit;
+            font-size: 0.8125rem;
+            font-weight: 600;
+            padding: 0.625rem 1.125rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.16s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            border: 1px solid transparent;
+            line-height: 1.2;
+        }
+
+        .btn:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+        }
+
+        .btn-primary {
+            background-color: var(--brand-blue-accent);
+            color: #ffffff;
+            box-shadow: 0 1px 2px rgba(29, 78, 216, 0.2);
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background-color: var(--brand-blue-hover);
+        }
+
+        .btn-outline {
+            background-color: var(--bg-surface);
+            color: var(--brand-navy);
+            border-color: var(--border-light);
+        }
+
+        .btn-outline:hover:not(:disabled) {
+            background-color: var(--bg-page);
+            border-color: #cbd5e1;
+        }
+
+        .btn-secondary-blue {
+            background-color: var(--bg-accent-wash);
+            color: var(--brand-blue-accent);
+            border-color: #bfdbfe;
+        }
+
+        .btn-secondary-blue:hover:not(:disabled) {
+            background-color: #dbeafe;
+        }
+
+        /* Editorial Sub-header */
+        .workspace-intro {
+            padding-top: 1.75rem;
+            padding-bottom: 1.25rem;
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .workspace-headline {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 1.375rem;
+            font-weight: 700;
+            color: var(--brand-navy);
+            letter-spacing: -0.02em;
+        }
+
+        .workspace-tagline {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        /* Main Workspace Grid */
+        .workspace-grid {
+            flex: 1;
+            display: grid;
+            grid-template-columns: repeat(12, minmax(0, 1fr));
+            gap: 1.75rem;
+            padding-bottom: 2.5rem;
+        }
+
+        .panel-card {
+            background-color: var(--bg-surface);
+            border: 1px solid var(--border-light);
+            border-radius: 12px;
+            box-shadow: var(--shadow-card);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .input-column {
+            grid-column: span 5 / span 5;
+            padding: 1.625rem;
+            gap: 1.375rem;
+        }
+
+        .preview-column {
+            grid-column: span 7 / span 7;
+            overflow: hidden;
+            min-height: 640px;
+        }
+
+        /* Form Sections */
+        .section-label {
+            display: block;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+        }
+
+        .mode-switcher {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.375rem;
+            background-color: var(--bg-subtle);
+            padding: 0.25rem;
+            border-radius: 9px;
+            border: 1px solid var(--border-light);
+        }
+
+        .mode-tab {
+            padding: 0.55rem 0.75rem;
+            font-size: 0.8125rem;
+            font-weight: 600;
+            border-radius: 6px;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .mode-tab.active {
+            background-color: var(--bg-surface);
+            color: var(--brand-blue-accent);
+            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+        }
+
+        .mode-tab:hover:not(.active) {
+            color: var(--text-primary);
+        }
+
+        /* Upload Drop Zone */
+        .upload-zone {
+            border: 1.5px dashed #cbd5e1;
+            border-radius: 10px;
+            padding: 2rem 1.5rem;
+            text-align: center;
+            cursor: pointer;
+            background-color: var(--bg-page);
+            transition: all 0.16s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 188px;
+        }
+
+        .upload-zone:hover,
+        .upload-zone.drag-active {
+            border-color: var(--brand-blue-accent);
+            background-color: var(--bg-accent-wash);
+        }
+
+        .upload-icon {
+            width: 36px;
+            height: 36px;
+            color: var(--brand-blue-accent);
+            margin-bottom: 0.625rem;
+        }
+
+        .upload-title {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .upload-subtitle {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 0.25rem;
+        }
+
+        /* Textareas */
+        .text-field {
+            width: 100%;
+            border-radius: 9px;
+            background-color: var(--bg-surface);
+            border: 1px solid #cbd5e1;
+            padding: 0.875rem;
+            font-family: inherit;
+            font-size: 0.875rem;
+            color: var(--text-primary);
+            line-height: 1.5;
+            resize: vertical;
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .text-field::placeholder {
+            color: #94a3b8;
+        }
+
+        .text-field:focus {
+            outline: none;
+            border-color: var(--border-focus);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+        }
+
+        /* Status Notification Line */
+        .status-notice {
+            padding: 0.75rem 0.9rem;
+            border-radius: 8px;
+            font-size: 0.8125rem;
+            font-weight: 500;
+            border-left: 3px solid transparent;
+        }
+
+        .status-notice.info {
+            background-color: var(--bg-accent-wash);
+            border-left-color: var(--brand-blue-accent);
+            color: var(--brand-blue);
+        }
+
+        .status-notice.success {
+            background-color: #f0fdf4;
+            border-left-color: #16a34a;
+            color: #166534;
+        }
+
+        .status-notice.error {
+            background-color: #fef2f2;
+            border-left-color: #dc2626;
+            color: #991b1b;
+        }
+
+        .action-row {
+            margin-top: auto;
+            padding-top: 0.5rem;
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        .action-row .btn-primary {
+            flex: 1;
+            padding: 0.75rem 1.25rem;
+        }
+
+        .action-row .btn-outline {
+            padding: 0.75rem 1.125rem;
+        }
+
+        /* Preview Column Header */
+        .preview-header {
+            padding: 0.95rem 1.375rem;
+            border-bottom: 1px solid var(--border-light);
+            background-color: var(--bg-surface);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .preview-header-title {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--text-secondary);
+        }
+
+        .preview-state-text {
+            font-size: 0.8125rem;
+            font-weight: 500;
+            color: var(--text-muted);
+        }
+
+        .preview-canvas {
+            position: relative;
+            flex: 1;
+            background-color: var(--bg-subtle);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .empty-preview-box {
+            text-align: center;
+            padding: 2.5rem;
+            max-width: 380px;
+        }
+
+        .empty-preview-title {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--brand-navy);
+        }
+
+        .empty-preview-desc {
+            font-size: 0.8125rem;
+            color: var(--text-muted);
+            line-height: 1.55;
+            margin-top: 0.375rem;
+        }
+
+        .preview-iframe {
+            width: 100%;
+            height: 100%;
+            border: 0;
+            background-color: #ffffff;
+        }
+
+        /* Footer */
+        .site-footer {
+            border-top: 1px solid var(--border-light);
+            background-color: var(--bg-surface);
+            padding: 1.125rem 0;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .footer-inner {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .footer-link {
+            color: var(--brand-blue-accent);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .footer-link:hover {
+            text-decoration: underline;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        @media (max-width: 1024px) {
+            .layout-container {
+                padding-left: 1.25rem;
+                padding-right: 1.25rem;
+            }
+            .input-column,
+            .preview-column {
+                grid-column: span 12 / span 12;
+            }
+            .brand-divider,
+            .brand-context {
+                display: none;
+            }
+        }
+    </style>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col">
-    <!-- Top Navigation Bar -->
-    <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur px-6 py-4 flex items-center justify-between">
-        <div class="flex items-center gap-3">
-            <div class="w-9 h-9 rounded-lg bg-blue-700 flex items-center justify-center font-bold text-white shadow">
-                DF
-            </div>
-            <div>
-                <h1 class="text-lg font-bold tracking-tight text-white">DocFlow AI Studio</h1>
-                <p class="text-xs text-slate-400">Sanitize, Restructure &amp; Compile Branded PDFs</p>
-            </div>
-        </div>
-        <div class="flex items-center gap-2">
-            <button
-                id="btn-design-test"
-                type="button"
-                class="text-xs font-medium px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition"
-                title="Test your HTML/CSS template immediately without using Gemini API quota"
-            >
-                Instant Design Preview (No AI Quota)
-            </button>
-            <a
-                id="btn-download"
-                href="#"
-                download="restructured_document.pdf"
-                class="hidden text-xs font-semibold px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white shadow transition"
-            >
-                Download PDF
+<body>
+    <!-- Centered Top Navigation Bar -->
+    <header class="site-header">
+        <div class="layout-container navbar-inner">
+            <a href="/" class="brand-identity">
+                <img
+                    id="navbar-logo"
+                    src="/static/images/Orchard_PD_Logo.png"
+                    alt="Orchard"
+                    class="brand-logo-img"
+                    onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src='/static/images/Orchard_PD_logo.png';}else{this.style.display='none';document.getElementById('navbar-logo-fallback').style.display='block';}"
+                />
+                <span id="navbar-logo-fallback" class="brand-Fallback-text">ORCHARD</span>
+                <div class="brand-divider"></div>
+                <div class="brand-context">
+                    <span class="brand-context-title">Position Profile Studio</span>
+                    <span class="brand-context-sub">Built by clinicians, for clinicians</span>
+                </div>
             </a>
+
+            <nav class="navbar-actions">
+                <button
+                    id="btn-design-test"
+                    type="button"
+                    class="btn btn-outline"
+                    title="Preview the Orchard PDF template immediately without using AI quota"
+                >
+                    Sample Template Preview
+                </button>
+                <a
+                    id="btn-download"
+                    href="#"
+                    download="Orchard_Job-00000.pdf"
+                    class="btn btn-secondary-blue hidden"
+                >
+                    Download Compiled PDF
+                </a>
+            </nav>
         </div>
     </header>
 
-    <!-- Main Split Workspace -->
-    <main class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 p-6 max-w-7xl w-full mx-auto">
-        <!-- Left Column: Input Controls -->
-        <section class="lg:col-span-5 flex flex-col gap-5 bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-lg">
-            <!-- Input Mode Toggle -->
-            <div>
-                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
-                    1. Select Source Input
-                </label>
-                <div class="grid grid-cols-2 gap-2 bg-slate-950 p-1 rounded-lg border border-slate-800">
-                    <button
-                        type="button"
-                        id="tab-pdf"
-                        class="py-2 text-xs font-semibold rounded-md bg-blue-600 text-white transition"
-                    >
-                        Upload PDF File
-                    </button>
-                    <button
-                        type="button"
-                        id="tab-text"
-                        class="py-2 text-xs font-semibold rounded-md text-slate-400 hover:text-white transition"
-                    >
-                        Paste Raw Text
-                    </button>
-                </div>
-            </div>
+    <!-- Main Centered Content Area -->
+    <div class="layout-container">
+        <div class="workspace-intro">
+            <h1 class="workspace-headline">VMS Job Post Sanitization & Client Rebranding</h1>
+            <p class="workspace-tagline">
+                Automatically redact facility and city identifiers, structure clinical requirements, and compile client-ready Orchard PDFs.
+            </p>
+        </div>
 
-            <form id="transform-form" class="flex flex-col gap-5 flex-1">
-                <!-- PDF Upload Panel -->
-                <div id="panel-pdf" class="flex flex-col gap-2">
-                    <label
-                        for="pdf-input"
-                        id="drop-zone"
-                        class="border-2 border-dashed border-slate-700 hover:border-blue-500 rounded-xl p-6 text-center cursor-pointer transition bg-slate-950/60 flex flex-col items-center justify-center min-h-[180px]"
-                    >
-                        <svg class="w-10 h-10 text-blue-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
-                        </svg>
-                        <span id="file-label-primary" class="text-sm font-medium text-slate-200">
-                            Click to select a PDF or drag &amp; drop here
-                        </span>
-                        <span id="file-label-sub" class="text-xs text-slate-500 mt-1">
-                            Maximum file size: 20 MB (.pdf only)
-                        </span>
-                        <input id="pdf-input" name="pdf_file" type="file" accept="application/pdf,.pdf" class="hidden" />
-                    </label>
+        <main class="workspace-grid">
+            <!-- Left Column: Source Input & Directives -->
+            <section class="panel-card input-column">
+                <div>
+                    <label class="section-label">1. Source Job Posting</label>
+                    <div class="mode-switcher">
+                        <button type="button" id="tab-pdf" class="mode-tab active">
+                            Upload VMS PDF
+                        </button>
+                        <button type="button" id="tab-text" class="mode-tab">
+                            Paste Raw Text
+                        </button>
+                    </div>
                 </div>
 
-                <!-- Raw Text Panel -->
-                <div id="panel-text" class="hidden flex-col gap-2">
-                    <textarea
-                        id="raw-text-input"
-                        name="raw_text"
-                        rows="8"
-                        placeholder="Paste messy notes, OCR text, or unformatted report data here..."
-                        class="w-full rounded-xl bg-slate-950 border border-slate-800 focus:border-blue-500 focus:outline-none p-3.5 text-sm text-slate-100 placeholder-slate-500 resize-y"
-                    ></textarea>
+                <form id="transform-form" style="display: flex; flex-direction: column; gap: 1.25rem; flex: 1;">
+                    <!-- PDF Upload Panel -->
+                    <div id="panel-pdf">
+                        <label for="pdf-input" id="drop-zone" class="upload-zone">
+                            <svg class="upload-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                            </svg>
+                            <span id="file-label-primary" class="upload-title">
+                                Select a VMS PDF file or drag and drop here
+                            </span>
+                            <span id="file-label-sub" class="upload-subtitle">
+                                Supports Locumsmart and vendor PDF exports up to 20 MB
+                            </span>
+                            <input id="pdf-input" name="pdf_file" type="file" accept="application/pdf,.pdf" class="hidden" />
+                        </label>
+                    </div>
+
+                    <!-- Raw Text Panel -->
+                    <div id="panel-text" class="hidden">
+                        <textarea
+                            id="raw-text-input"
+                            name="raw_text"
+                            rows="8"
+                            placeholder="Paste unstructured VMS job posting text, coverage details, or clinical notes here..."
+                            class="text-field"
+                        ></textarea>
+                    </div>
+
+                    <!-- Custom Formatting Directives -->
+                    <div>
+                        <label for="custom-instructions" class="section-label">
+                            2. Additional Formatting Directives (Optional)
+                        </label>
+                        <textarea
+                            id="custom-instructions"
+                            name="custom_instructions"
+                            rows="3"
+                            placeholder="e.g., Emphasize call ratio in Schedule & Coverage, or classify role as Locums to Perm..."
+                            class="text-field"
+                        ></textarea>
+                    </div>
+
+                    <!-- Inline Status Notice -->
+                    <div id="status-banner" class="status-notice hidden"></div>
+
+                    <!-- Primary Action Row -->
+                    <div class="action-row">
+                        <button type="submit" id="btn-generate-pdf" class="btn btn-primary">
+                            Generate Orchard PDF
+                        </button>
+                        <button type="button" id="btn-preview-html" class="btn btn-outline">
+                            HTML Preview
+                        </button>
+                    </div>
+                </form>
+            </section>
+
+            <!-- Right Column: Document Preview -->
+            <section class="panel-card preview-column">
+                <div class="preview-header">
+                    <span id="preview-title" class="preview-header-title">Document Output Preview</span>
+                    <span id="preview-badge" class="preview-state-text">Awaiting input</span>
                 </div>
 
-                <!-- Custom AI Instructions -->
-                <div class="flex flex-col gap-1.5">
-                    <label for="custom-instructions" class="text-xs font-semibold uppercase tracking-wider text-slate-400">
-                        2. Sanitization &amp; Branding Directives (Optional)
-                    </label>
-                    <textarea
-                        id="custom-instructions"
-                        name="custom_instructions"
-                        rows="3"
-                        placeholder="e.g., Remove confidential headers, use an executive tone, highlight financial totals, and group action items at the end."
-                        class="w-full rounded-xl bg-slate-950 border border-slate-800 focus:border-blue-500 focus:outline-none p-3 text-sm text-slate-100 placeholder-slate-500"
-                    ></textarea>
+                <div class="preview-canvas">
+                    <div id="empty-state" class="empty-preview-box">
+                        <p class="empty-preview-title">No Position Profile Compiled</p>
+                        <p class="empty-preview-desc">
+                            Upload a VMS PDF or paste job details on the left to generate a sanitized Orchard client profile, or select "Sample Template Preview" above.
+                        </p>
+                    </div>
+
+                    <iframe
+                        id="preview-frame"
+                        title="Compiled Orchard Document Preview"
+                        class="preview-iframe hidden"
+                    ></iframe>
                 </div>
+            </section>
+        </main>
+    </div>
 
-                <!-- Status Banner -->
-                <div id="status-banner" class="hidden rounded-lg p-3 text-xs font-medium border"></div>
-
-                <!-- Action Buttons -->
-                <div class="mt-auto pt-2 flex flex-col sm:flex-row gap-2.5">
-                    <button
-                        type="submit"
-                        id="btn-generate-pdf"
-                        class="flex-1 py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-50 font-semibold text-sm text-white shadow-lg transition flex items-center justify-center gap-2"
-                    >
-                        <span>Generate Branded PDF</span>
-                    </button>
-                    <button
-                        type="button"
-                        id="btn-preview-html"
-                        class="py-3 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-50 font-semibold text-sm text-slate-200 border border-slate-700 transition"
-                    >
-                        HTML Preview
-                    </button>
-                </div>
-            </form>
-        </section>
-
-        <!-- Right Column: Live Document Preview Frame -->
-        <section class="lg:col-span-7 flex flex-col bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-lg min-h-[600px]">
-            <div class="px-4 py-3 border-b border-slate-800 flex items-center justify-between bg-slate-950/50">
-                <span id="preview-title" class="text-xs font-semibold uppercase tracking-wider text-slate-400">
-                    Live Output Preview
-                </span>
-                <span id="preview-badge" class="text-xs px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-400">
-                    Idle
-                </span>
-            </div>
-
-            <div class="relative flex-1 bg-slate-950 flex items-center justify-center">
-                <!-- Empty State -->
-                <div id="empty-state" class="text-center p-8 max-w-sm">
-                    <p class="text-sm font-medium text-slate-300">No document compiled yet</p>
-                    <p class="text-xs text-slate-500 mt-1">
-                        Upload a PDF or paste raw text on the left, or click "Instant Design Preview" in the top bar to inspect your custom HTML/CSS layout.
-                    </p>
-                </div>
-
-                <!-- Embedded Preview Iframe -->
-                <iframe
-                    id="preview-frame"
-                    title="Compiled Document Preview"
-                    class="hidden w-full h-full border-0 bg-white"
-                ></iframe>
-            </div>
-        </section>
-    </main>
+    <!-- Centered Footer -->
+    <footer class="site-footer">
+        <div class="layout-container footer-inner">
+            <span>Orchard — Premium Locum Tenens & Permanent Staffing</span>
+            <a href="https://www.orchardcorp.com/" target="_blank" rel="noopener noreferrer" class="footer-link">
+                www.orchardcorp.com
+            </a>
+        </div>
+    </footer>
 
     <script>
         (() => {
@@ -184,7 +667,7 @@
             const statusBanner = document.getElementById("status-banner");
             const previewFrame = document.getElementById("preview-frame");
             const emptyState = document.getElementById("empty-state");
-            const previewBadge = document.getElementById("preview-badge");
+            const previewStateText = document.getElementById("preview-badge");
 
             let activeMode = "pdf";
             let isSubmitting = false;
@@ -198,25 +681,7 @@
             }
 
             function setStatus(message, type = "info") {
-                statusBanner.classList.remove(
-                    "hidden",
-                    "bg-red-950/80",
-                    "border-red-800",
-                    "text-red-200",
-                    "bg-blue-950/80",
-                    "border-blue-800",
-                    "text-blue-200",
-                    "bg-emerald-950/80",
-                    "border-emerald-800",
-                    "text-emerald-200"
-                );
-                if (type === "error") {
-                    statusBanner.classList.add("bg-red-950/80", "border-red-800", "text-red-200");
-                } else if (type === "success") {
-                    statusBanner.classList.add("bg-emerald-950/80", "border-emerald-800", "text-emerald-200");
-                } else {
-                    statusBanner.classList.add("bg-blue-950/80", "border-blue-800", "text-blue-200");
-                }
+                statusBanner.className = `status-notice ${type}`;
                 statusBanner.textContent = message;
             }
 
@@ -226,7 +691,7 @@
                 btnPreviewHtml.disabled = loading;
                 btnDesignTest.disabled = loading;
                 if (loading) {
-                    previewBadge.textContent = labelText;
+                    previewStateText.textContent = labelText;
                     setStatus(labelText, "info");
                 }
             }
@@ -234,15 +699,14 @@
             function switchMode(mode) {
                 activeMode = mode;
                 if (mode === "pdf") {
-                    tabPdf.className = "py-2 text-xs font-semibold rounded-md bg-blue-600 text-white transition";
-                    tabText.className = "py-2 text-xs font-semibold rounded-md text-slate-400 hover:text-white transition";
+                    tabPdf.classList.add("active");
+                    tabText.classList.remove("active");
                     panelPdf.classList.remove("hidden");
                     panelText.classList.add("hidden");
                 } else {
-                    tabText.className = "py-2 text-xs font-semibold rounded-md bg-blue-600 text-white transition";
-                    tabPdf.className = "py-2 text-xs font-semibold rounded-md text-slate-400 hover:text-white transition";
+                    tabText.classList.add("active");
+                    tabPdf.classList.remove("active");
                     panelText.classList.remove("hidden");
-                    panelText.classList.add("flex");
                     panelPdf.classList.add("hidden");
                 }
             }
@@ -260,14 +724,14 @@
 
             dropZone.addEventListener("dragover", (e) => {
                 e.preventDefault();
-                dropZone.classList.add("border-blue-500");
+                dropZone.classList.add("drag-active");
             });
             dropZone.addEventListener("dragleave", () => {
-                dropZone.classList.remove("border-blue-500");
+                dropZone.classList.remove("drag-active");
             });
             dropZone.addEventListener("drop", (e) => {
                 e.preventDefault();
-                dropZone.classList.remove("border-blue-500");
+                dropZone.classList.remove("drag-active");
                 if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
                     pdfInput.files = e.dataTransfer.files;
                     pdfInput.dispatchEvent(new Event("change"));
@@ -285,7 +749,7 @@
                 } else {
                     const textVal = rawTextInput.value.trim();
                     if (!textVal) {
-                        throw new Error("Please paste raw text to restructure.");
+                        throw new Error("Please paste raw job posting text to restructure.");
                     }
                     formData.append("raw_text", textVal);
                 }
@@ -303,7 +767,7 @@
                     return;
                 }
 
-                setLoadingState(true, expectPdf ? "Structuring & Compiling PDF..." : "Rendering HTML Preview...");
+                setLoadingState(true, expectPdf ? "Sanitizing & compiling PDF..." : "Rendering HTML preview...");
 
                 try {
                     const response = await fetch(endpoint, {
@@ -330,12 +794,12 @@
                         previewFrame.removeAttribute("srcdoc");
                         previewFrame.src = currentBlobUrl;
 
-                        const suggestedName = response.headers.get("X-Document-Filename") || "restructured_document.pdf";
+                        const suggestedName = response.headers.get("X-Document-Filename") || "Orchard_Job-Profile.pdf";
                         btnDownload.href = currentBlobUrl;
                         btnDownload.download = suggestedName;
                         btnDownload.classList.remove("hidden");
 
-                        previewBadge.textContent = "PDF Ready";
+                        previewStateText.textContent = suggestedName;
                         setStatus(`Compiled ${suggestedName} (${(pdfBlob.size / 1024).toFixed(1)} KB)`, "success");
                     } else {
                         const htmlText = await response.text();
@@ -343,11 +807,11 @@
                         previewFrame.srcdoc = htmlText;
                         btnDownload.classList.add("hidden");
 
-                        previewBadge.textContent = "HTML Preview";
+                        previewStateText.textContent = "HTML layout preview";
                         setStatus("Rendered live HTML/CSS preview.", "success");
                     }
                 } catch (err) {
-                    previewBadge.textContent = "Error";
+                    previewStateText.textContent = "Action required";
                     setStatus(err.message || "Unexpected error occurred.", "error");
                 } finally {
                     isSubmitting = false;
