@@ -26,7 +26,21 @@ class ContentSection(BaseModel):
     )
     key_bullets: list[str] = Field(
         default_factory=list,
-        description="Explicitly stated facts formatted as concise bullet points.",
+        description="Explicitly stated facts formatted as concise bullet points (used for sections 01-04).",
+    )
+    required_skills: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Populated ONLY for the 'Skills' section: clean list of required skills "
+            "without 'Required:' prefixes on each item."
+        ),
+    )
+    preferred_skills: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Populated ONLY for the 'Skills' section: clean list of preferred skills "
+            "without 'Preferred:' prefixes on each item."
+        ),
     )
 
 
@@ -49,7 +63,7 @@ class RestructuredDocument(BaseModel):
     )
     subtitle: str = Field(
         default="",
-        description="Brief role classification and state subtitle (e.g., 'Locums to Perm Opportunity | OH').",
+        description="Brief role classification and state subtitle (e.g., 'Locums Opportunity | TX').",
     )
     executive_summary: str = Field(
         ...,

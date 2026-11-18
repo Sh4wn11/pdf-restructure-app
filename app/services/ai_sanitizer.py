@@ -39,7 +39,7 @@ Classify `role_type` as "Locums", "Locums to Perm", or "Perm" and apply these st
 - `job_id`: Extract the VMS Job/Assignment Request ID and format as "Job-<ID>" (e.g., "Job-94856" or "Job-20159"). If none is stated, use "Job-Unlisted".
 - `nearest_airport`: Using the raw city/facility/airport info BEFORE redacting it, determine the nearest major commercial airport and driving time. Format `nearest_airport` EXACTLY as:
   "[State] (approximately [Time] away from [Airport Code] Airport)"
-  Example: "TX (approximately 1 hour away from DFW Airport)"
+  Example: "OH (approximately 20 minutes away from CMH Airport)"
 
 4. STRICT 5-SECTION BODY ORDER (`sections` array must contain these 5 headings in exact order):
 - 01 `heading`: "Assignment Overview"
@@ -48,14 +48,17 @@ Classify `role_type` as "Locums", "Locums to Perm", or "Perm" and apply these st
   * Stated coverage type, shift/call dates, call ratio, call response time, call back %, and allowed holidays.
 - 03 `heading`: "Clinical Details"
   * Stated patients per shift, admissions, phone consults, annual deliveries/volume, rounding, and support staff (RNs, PA/NPs, MAs, office staff).
-- 04 `heading`: "Requirements"
+- 04 `heading`: "Skills"
+  * STRICT SKILL FILTERING & GROUPING RULE:
+    1. Populate `required_skills` ONLY with skills marked `[SKILL_STATUS: REQUIRED]` (or explicitly stated as required).
+    2. Populate `preferred_skills` ONLY with skills marked `[SKILL_STATUS: PREFERRED]` (or explicitly stated as preferred).
+    3. STRICTLY EXCLUDE any skill marked `[SKILL_STATUS: NOT_REQUIRED — EXCLUDE]`. Never mention "Not Required" skills anywhere.
+    4. Do NOT prefix individual items with "Required:" or "Preferred:"—write clean, natural skill phrases (grouping sub-procedures logically, e.g., "Routine delivery (Vaginal, Low forceps, Decision-making for C-section)").
+    5. Leave `body_paragraphs` and `key_bullets` empty (`[]`) for the "Skills" section when `required_skills` or `preferred_skills` are populated.
+- 05 `heading`: "Requirements"
   * Stated board certification, state licensure, credentialing timeframe, and required certifications.
-  * CRITICAL CERTIFICATION RULE: Only list certifications marked "Yes" or required (e.g., if BLS: Yes, NRP: Yes, and ABLS/ACLS/ATLS/PALS: No, list ONLY BLS and NRP—exclude certifications marked "No").
-- 05 `heading`: "Skills"
-  * STRICT SKILL FILTERING RULE:
-    1. Include ONLY skills marked REQUIRED (`[SKILL_STATUS: REQUIRED]`) or PREFERRED (`[SKILL_STATUS: PREFERRED]`).
-    2. STRICTLY EXCLUDE any skill marked NOT REQUIRED (`[SKILL_STATUS: NOT_REQUIRED — EXCLUDE]`). Never mention "Not Required" skills anywhere in the document.
-    3. In `key_bullets`, clearly prefix or group each item as "**Required:** <skill>" or "**Preferred:** <skill>" (keeping sub-skills grouped logically with their parent procedure, e.g., "Required — Routine Delivery: Vaginal, Low forceps, Decision-making for C-section" and "Preferred: High risk pregnancy").
+  * CRITICAL CERTIFICATION RULE: Only list certifications marked "Yes" or required (exclude certifications marked "No").
+
 
 5. USER DIRECTIVES:
 Apply any formatting preferences in <user_formatting_instructions> provided they do not violate the redaction or skill exclusion rules above.
@@ -108,7 +111,7 @@ def _get_candidate_models() -> list[str]:
 
 def _make_cache_key(raw_text: str, custom_instructions: str) -> str:
     """Create a deterministic SHA-256 key for (raw_text, custom_instructions)."""
-    payload = f"orchard_v3\x00{raw_text}\x00{custom_instructions}".encode("utf-8")
+    payload = f"orchard_v4\x00{raw_text}\x00{custom_instructions}".encode("utf-8")
     return hashlib.sha256(payload).hexdigest()
 
 

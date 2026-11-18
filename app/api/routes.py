@@ -78,6 +78,21 @@ def _build_sample_document() -> RestructuredDocument:
                 ],
             ),
             ContentSection(
+                heading="Skills",
+                body_paragraphs=[],
+                highlight_callout=None,
+                key_bullets=[],
+                required_skills=[
+                    "Inpatient acute care management and hospitalist rounding",
+                    "Level I/Screening (viability) ultrasound and FHR interpretation",
+                    "Routine and complicated delivery (Vaginal, C-section, VBAC)",
+                ],
+                preferred_skills=[
+                    "High-risk clinical case management",
+                    "OB ultrasound performance and interpretation",
+                ],
+            ),
+            ContentSection(
                 heading="Requirements",
                 body_paragraphs=[
                     "Candidates must hold an active OH medical license and current DEA registration."
@@ -87,17 +102,6 @@ def _build_sample_document() -> RestructuredDocument:
                     "Board Certified in Internal Medicine (ABIM) or Family Medicine (ABFM).",
                     "Active ACLS and BLS certifications.",
                     "Clean malpractice history for emergency temp privileges (30–45 days).",
-                ],
-            ),
-            ContentSection(
-                heading="Skills",
-                body_paragraphs=[
-                    "Inpatient acute care management and standard hospitalist rounding."
-                ],
-                highlight_callout=None,
-                key_bullets=[
-                    "No bedside procedures (intubations or central lines) required.",
-                    "Proficiency with Epic inpatient order sets and discharge documentation.",
                 ],
             ),
         ],

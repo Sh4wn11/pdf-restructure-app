@@ -8,10 +8,10 @@
     </style>
 </head>
 <body>
-    <!-- Upper Header with Right-Aligned Orchard_PD_Logo -->
+    <!-- Upper Header with Professional Reference Label & Right-Aligned Orchard Logo -->
     <header class="report-header">
         <div class="brand-title-group">
-            <div class="job-id-badge">Orchard_{{ doc.job_id }}</div>
+            <div class="job-id-label">Orchard_{{ doc.job_id }}</div>
             <h1 class="document-title">{{ doc.document_title }}</h1>
             {% if doc.subtitle %}
             <p class="document-subtitle">{{ doc.subtitle }}</p>
@@ -24,17 +24,14 @@
         {% endif %}
     </header>
 
-    <!-- Navbar: Date & Nearest Airport Only -->
+    <!-- Navbar: Nearest Airport Only -->
     <section class="metadata-bar">
-        <div class="metadata-item">
-            <strong>Date:</strong> {{ doc.metadata_date }}
-        </div>
         <div class="metadata-item">
             <strong>Nearest Airport:</strong> {{ doc.nearest_airport }}
         </div>
     </section>
 
-    <!-- Executive Summary -->
+    <!-- Position Overview -->
     <section class="executive-summary">
         <div class="executive-summary-label">Position Overview</div>
         <p>{{ doc.executive_summary }}</p>
@@ -59,6 +56,32 @@
             </div>
             {% endif %}
 
+            {% if section.required_skills or section.preferred_skills %}
+            <div class="skills-grid">
+                {% if section.required_skills %}
+                <div class="skills-column">
+                    <h3 class="skills-subheading">Required Skills</h3>
+                    <ul class="bullet-list">
+                        {% for skill in section.required_skills %}
+                        <li>{{ skill }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+
+                {% if section.preferred_skills %}
+                <div class="skills-column">
+                    <h3 class="skills-subheading">Preferred Skills</h3>
+                    <ul class="bullet-list">
+                        {% for skill in section.preferred_skills %}
+                        <li>{{ skill }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+
             {% if section.key_bullets %}
             <ul class="bullet-list">
                 {% for bullet in section.key_bullets %}
@@ -72,7 +95,7 @@
 
     <!-- Footer -->
     <footer class="report-footer">
-        <span>Orchard Position Profile</span>
+        <span>www.orchardcorp.com</span>
         <span>Orchard_{{ doc.job_id }}</span>
     </footer>
 </body>
