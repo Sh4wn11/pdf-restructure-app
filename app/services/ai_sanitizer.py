@@ -67,7 +67,7 @@ _STRUCTURED_CACHE: OrderedDict[str, RestructuredDocument] = OrderedDict()
 @lru_cache(maxsize=1)
 def get_genai_client() -> genai.Client:
     """Return a cached Google GenAI client with a 90s server deadline and fast 2-attempt retry."""
-    http_kwargs: dict = {"timeout": 90000}
+    http_kwargs: dict = {"timeout": 600000}
     retry_cls = getattr(types, "HttpRetryOptions", None)
     if retry_cls is not None:
         http_kwargs["retry_options"] = retry_cls(
