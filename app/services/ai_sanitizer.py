@@ -28,7 +28,7 @@ Classify `role_type` as "Locums", "Locums to Perm", or "Perm" and apply these st
 - ALL ROLES (Locums, Locums to Perm, and Perm):
   * NO FACILITY NAMES: Replace any hospital, clinic, health system, or facility name with "Facility", "Client", or "Location".
   * NO CITY NAMES: Remove all city, town, and county names from the output (keep State abbreviation only).
-  * NO AGENCY/VMS NOTES: Remove vendor instructions, submission rules, bill rates, and VMS contact details (e.g., "Agencies must submit...").
+  * NO AGENCY/VMS NOTES: Remove vendor instructions, submission rules, bill rates, internal contact names, and VMS notes.
 - IF LOCUMS or LOCUMS TO PERM:
   * NO COMPENSATION: Remove all pay rates, hourly/daily rates, salary, bonuses, and compensation figures.
 - IF PERM (Permanent):
@@ -36,26 +36,29 @@ Classify `role_type` as "Locums", "Locums to Perm", or "Perm" and apply these st
   * KEEP COMPENSATION & BENEFITS: Retain candidate salary, pay rates, sign-on bonuses, and benefits packages.
 
 3. NEAREST AIRPORT & JOB ID:
-- `job_id`: Extract the VMS Job/Req ID and format as "Job-<ID>" (e.g., "Job-20159"). If none is stated, use "Job-Unlisted".
-- `nearest_airport`: Using the raw city/facility location BEFORE redacting it, determine the nearest major commercial airport and driving time. Format `nearest_airport` EXACTLY as:
+- `job_id`: Extract the VMS Job/Assignment Request ID and format as "Job-<ID>" (e.g., "Job-94856" or "Job-20159"). If none is stated, use "Job-Unlisted".
+- `nearest_airport`: Using the raw city/facility/airport info BEFORE redacting it, determine the nearest major commercial airport and driving time. Format `nearest_airport` EXACTLY as:
   "[State] (approximately [Time] away from [Airport Code] Airport)"
-  Example: "OH (approximately 20 minutes away from CMH Airport)"
+  Example: "TX (approximately 1 hour away from DFW Airport)"
 
 4. STRICT 5-SECTION BODY ORDER (`sections` array must contain these 5 headings in exact order):
 - 01 `heading`: "Assignment Overview"
-  * First paragraph or bullet group MUST start with "Location & Facility Details:" covering stated setting, bed count, trauma level, EMR, and state (with facility/city redacted). For Perm roles, include stated candidate salary and benefits here.
+  * First paragraph MUST start with "Location & Facility Details:" covering stated setting, department beds, trauma/peds level, EMR, and state (with facility/city redacted). For Perm roles, include stated candidate salary and benefits here.
 - 02 `heading`: "Schedule & Coverage"
-  * Stated shift hours, start/end dates, call coverage, weekend/holiday rotation, and FTE/hours.
+  * Stated coverage type, shift/call dates, call ratio, call response time, call back %, and allowed holidays.
 - 03 `heading`: "Clinical Details"
-  * Stated patient volume, case mix, procedures, rounding, support staff, and inpatient/outpatient split.
-- 04 `heading`: "Skills"
-  * Explicitly stated clinical, procedural, or technical skills required.
-- 05 `heading`: "Requirements"
-  * Stated board certification, state licensure, DEA, certifications (BLS/ACLS/PALS), experience, and credentialing notes.
-(If the source text has no explicit information for a section, set its `body_paragraphs` to ["Not specified in source posting."] and `key_bullets` to [].)
+  * Stated patients per shift, admissions, phone consults, annual deliveries/volume, rounding, and support staff (RNs, PA/NPs, MAs, office staff).
+- 04 `heading`: "Requirements"
+  * Stated board certification, state licensure, credentialing timeframe, and required certifications.
+  * CRITICAL CERTIFICATION RULE: Only list certifications marked "Yes" or required (e.g., if BLS: Yes, NRP: Yes, and ABLS/ACLS/ATLS/PALS: No, list ONLY BLS and NRP—exclude certifications marked "No").
+- 05 `heading`: "Skills"
+  * STRICT SKILL FILTERING RULE:
+    1. Include ONLY skills marked REQUIRED (`[SKILL_STATUS: REQUIRED]`) or PREFERRED (`[SKILL_STATUS: PREFERRED]`).
+    2. STRICTLY EXCLUDE any skill marked NOT REQUIRED (`[SKILL_STATUS: NOT_REQUIRED — EXCLUDE]`). Never mention "Not Required" skills anywhere in the document.
+    3. In `key_bullets`, clearly prefix or group each item as "**Required:** <skill>" or "**Preferred:** <skill>" (keeping sub-skills grouped logically with their parent procedure, e.g., "Required — Routine Delivery: Vaginal, Low forceps, Decision-making for C-section" and "Preferred: High risk pregnancy").
 
 5. USER DIRECTIVES:
-Apply any formatting preferences in <user_formatting_instructions> provided they do not violate the redaction rules above.
+Apply any formatting preferences in <user_formatting_instructions> provided they do not violate the redaction or skill exclusion rules above.
 """
 
 TRANSIENT_STATUS_CODES: set[int] = {429, 500, 502, 503, 504}
@@ -105,7 +108,7 @@ def _get_candidate_models() -> list[str]:
 
 def _make_cache_key(raw_text: str, custom_instructions: str) -> str:
     """Create a deterministic SHA-256 key for (raw_text, custom_instructions)."""
-    payload = f"orchard_v2\x00{raw_text}\x00{custom_instructions}".encode("utf-8")
+    payload = f"orchard_v3\x00{raw_text}\x00{custom_instructions}".encode("utf-8")
     return hashlib.sha256(payload).hexdigest()
 
 
