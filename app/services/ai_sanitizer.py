@@ -38,7 +38,7 @@ def get_genai_client() -> genai.Client:
     Return a cached Google GenAI client with a 90s server deadline (preventing premature
     504 Deadline Expired errors) and a fast 2-attempt retry for brief 503 blips.
     """
-    http_kwargs: dict = {"timeout": 90000}  # 90,000 ms (90s) deadline
+    http_kwargs: dict = {"timeout": 600000} 
     retry_cls = getattr(types, "HttpRetryOptions", None)
     if retry_cls is not None:
         http_kwargs["retry_options"] = retry_cls(
