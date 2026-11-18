@@ -1,7 +1,7 @@
 import asyncio
+import hashlib
 import logging
-import random
-import time
+from collections import OrderedDict
 from functools import lru_cache
 from fastapi import HTTPException, status
 from google import genai
@@ -26,29 +26,25 @@ Strict Operating Rules:
 """
 
 TRANSIENT_STATUS_CODES: set[int] = {429, 500, 502, 503, 504}
-MAX_RETRIES_PER_MODEL: int = 3
-BASE_BACKOFF_SECONDS: float = 2.0
-
-# Substrings identifying non-text-structuring models to skip during dynamic fallback discovery
-EXCLUDED_MODEL_KEYWORDS: tuple[str, ...] = (
-    "embedding",
-    "imagen",
-    "veo",
-    "tts",
-    "audio",
-    "Live",
-    "aqa",
-    "learnlm",
-    "2.0",
-    "2.5",
-    "1.5",
-)
+MAX_CACHE_ENTRIES: int = 32
+_STRUCTURED_CACHE: OrderedDict[str, RestructuredDocument] = OrderedDict()
 
 
 @lru_cache(maxsize=1)
 def get_genai_client() -> genai.Client:
-    """Return a cached singleton Google GenAI client initialized with the configured API key."""
-    return genai.Client(api_key=settings.GEMINI_API_KEY)
+    """
+    Return a cached Google GenAI client with a 20s timeout and single-attempt HTTP retry
+    so the internal tenacity loop never hangs for 10 minutes on 503 spikes.
+    """
+    http_kwargs: dict = {"timeout": 20000}  # 20,000 ms (20s) hard timeout per model
+    retry_cls = getattr(types, "HttpRetryOptions", None)
+    if retry_cls is not None:
+        http_kwargs["retry_options"] = retry_cls(attempts=1)
+
+    return genai.Client(
+        api_key=settings.GEMINI_API_KEY,
+        http_options=types.HttpOptions(**http_kwargs),
+    )
 
 
 def _neutralize_xml_tags(text: str) -> str:
@@ -61,41 +57,38 @@ def _neutralize_xml_tags(text: str) -> str:
     )
 
 
-def _discover_active_gemini_models(client: genai.Client) -> list[str]:
-    """Query the API for active Gemini text models if configured models are unavailable."""
-    discovered: list[str] = []
-    try:
-        for model_info in client.models.list():
-            raw_name = getattr(model_info, "name", "") or ""
-            short_name = raw_name.removeprefix("models/")
-            if "gemini" not in short_name.lower():
-                continue
-            if any(excluded.lower() in short_name.lower() for excluded in EXCLUDED_MODEL_KEYWORDS):
-                continue
-            supported_actions = getattr(model_info, "supported_actions", None) or []
-            if supported_actions and "generateContent" not in supported_actions:
-                continue
-            discovered.append(short_name)
-    except Exception as exc:
-        logger.warning("Could not dynamically list models from API: %s", exc)
-    return discovered
-
-
-def _build_candidate_models(client: genai.Client) -> list[str]:
-    """Return deduplicated list of [primary_model, configured_fallbacks, dynamically_discovered]."""
-    configured_fallbacks = getattr(
-        settings,
-        "GEMINI_FALLBACK_MODELS",
-        ["gemini-3.8-flash-lite", "gemini-3.8-pro"],
-    )
-    discovered_fallbacks = _discover_active_gemini_models(client)
-
+def _get_candidate_models() -> list[str]:
+    """Return a deduplicated list of configured primary and fallback models."""
+    configured_fallbacks = getattr(settings, "GEMINI_FALLBACK_MODELS", [])
     candidates: list[str] = []
-    for model_name in [settings.GEMINI_MODEL, *configured_fallbacks, *discovered_fallbacks]:
+    for model_name in [settings.GEMINI_MODEL, *configured_fallbacks]:
         cleaned = model_name.strip().removeprefix("models/")
         if cleaned and cleaned not in candidates:
             candidates.append(cleaned)
     return candidates
+
+
+def _make_cache_key(raw_text: str, custom_instructions: str) -> str:
+    """Create a deterministic SHA-256 key for (raw_text, custom_instructions)."""
+    payload = f"{raw_text}\x00{custom_instructions}".encode("utf-8")
+    return hashlib.sha256(payload).hexdigest()
+
+
+def _get_cached_document(cache_key: str) -> RestructuredDocument | None:
+    """Return a deep copy of a previously structured document if cached."""
+    cached = _STRUCTURED_CACHE.get(cache_key)
+    if cached is not None:
+        _STRUCTURED_CACHE.move_to_end(cache_key)
+        return cached.model_copy(deep=True)
+    return None
+
+
+def _store_cached_document(cache_key: str, doc: RestructuredDocument) -> None:
+    """Store a structured document in the bounded LRU memory cache."""
+    _STRUCTURED_CACHE[cache_key] = doc.model_copy(deep=True)
+    _STRUCTURED_CACHE.move_to_end(cache_key)
+    while len(_STRUCTURED_CACHE) > MAX_CACHE_ENTRIES:
+        _STRUCTURED_CACHE.popitem(last=False)
 
 
 def sanitize_and_structure(
@@ -103,8 +96,8 @@ def sanitize_and_structure(
     custom_instructions: str = "",
 ) -> RestructuredDocument:
     """
-    Synchronously send extracted text to Gemini with strict schema enforcement,
-    per-model exponential backoff on 503/429 spikes, and dynamic model failover.
+    Synchronously send extracted text to Gemini with instant SHA-256 caching
+    and fast failover across configured models.
     """
     cleaned_source = raw_text.strip()
     if not cleaned_source:
@@ -115,6 +108,13 @@ def sanitize_and_structure(
 
     safe_source = _neutralize_xml_tags(cleaned_source)
     safe_instructions = _neutralize_xml_tags(custom_instructions.strip())
+
+    # 1. Check in-memory cache so clicking "Generate PDF" after "HTML Preview" is instant
+    cache_key = _make_cache_key(safe_source, safe_instructions)
+    cached_doc = _get_cached_document(cache_key)
+    if cached_doc is not None:
+        print("[AI Sanitizer] Cache hit! Reusing structured document in 0ms.", flush=True)
+        return cached_doc
 
     prompt_parts: list[str] = [
         "<untrusted_source_data>",
@@ -134,64 +134,41 @@ def sanitize_and_structure(
 
     full_prompt = "\n".join(prompt_parts)
     client = get_genai_client()
-    candidate_models = _build_candidate_models(client)
+    candidate_models = _get_candidate_models()
 
     response = None
-    primary_error: genai_errors.APIError | None = None
+    primary_error: Exception | None = None
 
     for model_name in candidate_models:
-        for attempt in range(1, MAX_RETRIES_PER_MODEL + 1):
-            try:
-                response = client.models.generate_content(
-                    model=model_name,
-                    contents=full_prompt,
-                    config=types.GenerateContentConfig(
-                        system_instruction=SYSTEM_INSTRUCTION,
-                        response_mime_type="application/json",
-                        response_schema=RestructuredDocument,
-                        temperature=0.1,
-                    ),
-                )
-                break  # Success on this attempt!
-            except genai_errors.APIError as exc:
-                err_code = getattr(exc, "code", None)
-
-                # Preserve the first non-404 transient error so fallback 404s don't mask it
-                if primary_error is None or err_code in TRANSIENT_STATUS_CODES:
-                    primary_error = exc
-
-                if err_code == 404:
-                    logger.warning("Model '%s' not found (404). Skipping to next candidate...", model_name)
-                    break  # Do not retry a 404 on the same model
-
-                if err_code in TRANSIENT_STATUS_CODES and attempt < MAX_RETRIES_PER_MODEL:
-                    sleep_sec = (BASE_BACKOFF_SECONDS * (2 ** (attempt - 1))) + random.uniform(0.1, 0.8)
-                    logger.warning(
-                        "Model '%s' returned %s (attempt %d/%d). Retrying in %.1fs...",
-                        model_name,
-                        err_code,
-                        attempt,
-                        MAX_RETRIES_PER_MODEL,
-                        sleep_sec,
-                    )
-                    time.sleep(sleep_sec)
-                    continue
-
-                logger.warning(
-                    "Model '%s' exhausted retries (code=%s). Trying next fallback model...",
-                    model_name,
-                    err_code,
-                )
-                break
-            except Exception as exc:
-                logger.exception("Unexpected failure calling Gemini API on model '%s'", model_name)
-                raise HTTPException(
-                    status_code=status.HTTP_502_BAD_GATEWAY,
-                    detail="Failed to communicate with the AI structuring service.",
-                ) from exc
-
-        if response is not None:
+        print(f"[AI Sanitizer] Requesting structured output from '{model_name}'...", flush=True)
+        try:
+            response = client.models.generate_content(
+                model=model_name,
+                contents=full_prompt,
+                config=types.GenerateContentConfig(
+                    system_instruction=SYSTEM_INSTRUCTION,
+                    response_mime_type="application/json",
+                    response_schema=RestructuredDocument,
+                    temperature=0.1,
+                ),
+            )
+            print(f"[AI Sanitizer] Received valid response from '{model_name}'.", flush=True)
             break
+        except genai_errors.APIError as exc:
+            err_code = getattr(exc, "code", None)
+            err_msg = getattr(exc, "message", str(exc))
+            print(
+                f"[AI Sanitizer] Model '{model_name}' failed (HTTP {err_code}): {err_msg}",
+                flush=True,
+            )
+            if primary_error is None or err_code in TRANSIENT_STATUS_CODES:
+                primary_error = exc
+            continue
+        except Exception as exc:
+            print(f"[AI Sanitizer] Model '{model_name}' timed out or failed: {exc}", flush=True)
+            if primary_error is None:
+                primary_error = exc
+            continue
 
     if response is None:
         err_code = getattr(primary_error, "code", None)
@@ -219,7 +196,9 @@ def sanitize_and_structure(
         )
 
     try:
-        return RestructuredDocument.model_validate_json(raw_json)
+        validated_doc = RestructuredDocument.model_validate_json(raw_json)
+        _store_cached_document(cache_key, validated_doc)
+        return validated_doc
     except ValidationError as exc:
         logger.error("Schema validation failed on AI output: %s", exc)
         raise HTTPException(
